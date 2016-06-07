@@ -14,8 +14,10 @@
 #define DEFAULT_TIMEOUT 1 // Default timeout is 1 second
 #define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
 #define DST_PORT 69   // Server port defined in RFC1350
+#define HOST_LEN 128  // Maximum length of a hostname
 #define PORT_MIN 10000 // Minimum port used as TID (source)
 #define PORT_MAX 50000 // Maximum port used as TID (source)
+#define DST_HOST "192.168.0.100"
 
 /* Struct with all we need to send a datagram */
 struct conn_info {
@@ -211,6 +213,39 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
     return 0;
 }
 
+/* Handle CLI arguments
+ * Args:
+ *  - argc: Number of CLI args
+ *  - argv: Value of CLI args
+ *  - host: Host to request
+ *  - host_size: Max length of hostnames
+ *  - filenames: Files we are requesting
+ *  */
+void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, char *host, size_t host_size, char **filenames)
+{
+    int i, choice, index; // Getopt stuff
+
+    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:e")) != -1) {
+
+        switch( choice )
+        {
+            case 'H':
+                if (strlen(optarg) > host_size)
+                    error("Host too big");
+
+                snprintf(host, host_size, "%s", optarg);
+                break;
+
+            default:
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    /* Deal with non-option arguments here */
+    for (i=0, index = optind; index < argc; i++, index++)
+        filenames[i] = (char*) argv[index];
+}
+
 /* Init socket for the connection
  * Args:
  *  - conn: Connections info to set
@@ -289,23 +324,38 @@ int main(int argc, const char *argv[])
 
     struct conn_info conn; // Struct in which we will put all connection infos
 
-    char host = "127.0.0.1"; // Destination's address
-    char *filename = "foobar";
+    char host[HOST_LEN] = DST_HOST; // Destination's address
+    char **filenames; // Array of all files
     char *buffer;
+    int i;
 
     buffer=malloc(buffer_size * sizeof(char));
 
-    init_conn(&conn, host);
+    filenames=malloc(argc * sizeof(char*));
+    bzero(filenames, argc * sizeof(char*));
 
-    bzero(buffer, buffer_size * sizeof(char));
+    // Parsing CLI
+    opts(argc, argv, host, HOST_LEN, filenames);
 
-    if(send_rrq(conn, buffer, buffer_size, filename, "octet", pref_buffer_size, timeout, no_ext) < 0)
-        error("send_rrq");
+    if (filenames[0] == NULL)
+        error("No file asked");
 
-    if(get_data(conn, &buffer, buffer_size, filenames[i]) < 0)
-        error("get_data");
+    for (i = 0; filenames[i] != NULL ; i++) {
+        init_conn(&conn, host);
 
-    free_conn(conn);
+        bzero(buffer, buffer_size * sizeof(char));
+
+        fprintf(stderr, "Downloading: %s\n", filenames[i]);
+        if(send_rrq(conn, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
+            error("send_rrq");
+
+        if(get_data(conn, &buffer, buffer_size, filenames[i]) < 0)
+            error("get_data");
+
+        free_conn(conn);
+    }
+
+    free (filenames);
     free (buffer);
 
     return 0;
