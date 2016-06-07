@@ -120,6 +120,38 @@ void send_ack(struct conn_info conn, int block_nb)
         error("send_ack");
 }
 
+/* Handle DATA datagram (either client or server)
+ * Args:
+ *  - conn: Connections info to be able to send back ACK/ERROR
+ *  - buffer: Buffer with the data received
+ *  - n: Number of bytes in the buffer
+ *  - last_block: Value pointed to is the block# from the last OK DATA
+ *  - fd_dst: file descriptor to the file in which we write the data
+ *  */
+int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, FILE *fd_dst)
+{
+    int block_nb; // Current block#
+
+    // Minus opcode and block number
+    n -= 4;
+
+    block_nb = (unsigned char) buffer[2] * 256 + (unsigned char) buffer[3];
+
+    if (block_nb != *last_block + 1)
+        return -1;
+
+    (*last_block)++;
+
+    if ((int) fwrite(buffer+4, sizeof(char), n, fd_dst) != n) {
+        send_error(conn, 3, "Disk full");
+        error("Cannot write/disk full");
+    }
+
+    send_ack(conn, block_nb);
+
+    return 0;
+}
+
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
@@ -130,6 +162,7 @@ void send_ack(struct conn_info conn, int block_nb)
 int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filename)
 {
     int end = 0; // Flag wether or not we can continue the loop
+    int last_block = 0; // Block# of the last OK DATA
     int n; // Size of the last datagram we got
     FILE *fd_dst;
 
@@ -150,6 +183,11 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
             switch ((*buffer)[1]) {
                 case 3:
                     // DATA
+                    if (handle_data(conn, *buffer, n, &last_block, fd_dst) == 0 &&
+                            n < buffer_size - 4) {
+                        end = 1;
+                        break;
+                    }
                     break;
                 default:
                     // Anything else is an error (RRQ/WRQ/ACK/ERROR or non specified)
