@@ -74,6 +74,9 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
 
     i += 1 + sprintf(buffer+i, "%s", mode);
 
+    i += 1 + sprintf(buffer+i, "tsize");
+    i += 1 + sprintf(buffer+i, "0");
+
     if(sendto(conn.fd, buffer, i, 0, conn.sock, conn.addr_len) < 0)
         error("send_rrq");
 
@@ -130,14 +133,21 @@ void send_ack(struct conn_info conn, int block_nb)
  *  - buffer: Buffer with the data received
  *  - buffer_size: Maximum buffer size (can be modified here)
  *  - n: Number of bytes in the buffer
+ *  - final_size: Value pointed to is the total size of the file we're supposed to get
+ *  - filename: File we work on
  *  */
-void handle_oack_c(char **buffer, int n)
+void handle_oack_c(char **buffer, int n, int *final_size, char* filename)
 {
     int i, timeout;
     struct timeval tv;
 
     for (i = 2; i < n; i++) {
-        /* Handle differents extensions here */
+        if (strncmp(*buffer+i, "tsize\0", 6) == 0) {
+            i += 6;
+
+            *final_size = atoi(*buffer + i);
+            fprintf(stderr, "Size of '%s': %d\n",filename, *final_size);
+        }
 
         // Consume last chars until next \0
         while ((*buffer)[i] != 0 && i < n)
@@ -151,9 +161,10 @@ void handle_oack_c(char **buffer, int n)
  *  - buffer: Buffer with the data received
  *  - n: Number of bytes in the buffer
  *  - last_block: Value pointed to is the block# from the last OK DATA
+ *  - total_size: Value pointed to is the incremental size we got in this transaction
  *  - fd_dst: file descriptor to the file in which we write the data
  *  */
-int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, FILE *fd_dst)
+int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, int *total_size, FILE *fd_dst)
 {
     int block_nb; // Current block#
 
@@ -172,6 +183,8 @@ int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, FIL
         error("Cannot write/disk full");
     }
 
+    *total_size += n;
+
     send_ack(conn, block_nb);
 
     return 0;
@@ -188,6 +201,8 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 {
     int end = 0; // Flag wether or not we can continue the loop
     int last_block = 0; // Block# of the last OK DATA
+    int total_size = 0; // Incremental size of the file we got so far
+    int final_size = -1; // Total size of the file we're supposed to get
     int n; // Size of the last datagram we got
     FILE *fd_dst;
 
@@ -208,12 +223,12 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
             switch ((*buffer)[1]) {
                 case 6:
                     // OACK (Option ACK)
-                    handle_oack_c(buffer, n);
+                    handle_oack_c(conn, buffer, &buffer_size, n, &final_size, filename);
                     send_ack(conn, 0);
                     break;
                 case 3:
                     // DATA
-                    if (handle_data(conn, *buffer, n, &last_block, fd_dst) == 0 &&
+                    if (handle_data(conn, *buffer, n, &last_block, &total_size, fd_dst) == 0 &&
                             n < buffer_size - 4) {
                         end = 1;
                         break;
@@ -232,8 +247,12 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
             break;
     }
 
-
     fclose(fd_dst);
+
+    if (final_size != -1 && final_size != total_size) {
+        fprintf(stderr, "Final size of '%s' is wrong. Got %dB instead of %dB\n", filename, total_size, final_size);
+        return -1;
+    }
 
     return 0;
 }
