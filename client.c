@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
 #define DST_PORT 69   // Server port defined in RFC1350
 
 /* Struct with all we need to send a datagram */
@@ -92,14 +93,22 @@ void free_conn(struct conn_info conn)
 
 int main(int argc, const char *argv[])
 {
+    size_t buffer_size = DEFAULT_BLK_SIZE; // Default buffer size until renegociated
+
     struct conn_info conn; // Struct in which we will put all connection infos
 
     char host = "127.0.0.1"; // Destination's address
     char *filename = "foobar";
+    char *buffer;
+
+    buffer=malloc(buffer_size * sizeof(char));
 
     init_conn(&conn, host);
 
+    bzero(buffer, buffer_size * sizeof(char));
+
     free_conn(conn);
+    free (buffer);
 
     return 0;
 }
