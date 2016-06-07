@@ -75,6 +75,46 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
     return i;
 }
 
+/* Loop in which we handle all data received for our request
+ * Args:
+ *  - conn: Connections info to be able to send back ACK/ERROR
+ *  - buffer: Buffer with the data received
+ *  - buffer_size: Maximum buffer size
+ *  - filename: File we work on
+ *  */
+int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filename)
+{
+    int end = 0; // Flag wether or not we can continue the loop
+    int n; // Size of the last datagram we got
+
+    bzero(*buffer, buffer_size);
+    while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
+        if (n < 0) {
+            fprintf(stderr, "Timeout or error while receiving data\n");
+            break;
+        }
+
+        if ((*buffer)[0] == 0) {
+            switch ((*buffer)[1]) {
+                case 3:
+                    // DATA
+                    break;
+                default:
+                    // Anything else is an error (RRQ/WRQ/ACK/ERROR or non specified)
+                    end = 1;
+                    break;
+            }
+        }
+
+        bzero(*buffer, buffer_size);
+
+        if (end == 1)
+            break;
+    }
+
+    return 0;
+}
+
 /* Init socket for the connection
  * Args:
  *  - conn: Connections info to set
@@ -152,6 +192,9 @@ int main(int argc, const char *argv[])
 
     if(send_rrq(conn, buffer, buffer_size, filename, "octet", pref_buffer_size, timeout, no_ext) < 0)
         error("send_rrq");
+
+    if(get_data(conn, &buffer, buffer_size, filenames[i]) < 0)
+        error("get_data");
 
     free_conn(conn);
     free (buffer);
