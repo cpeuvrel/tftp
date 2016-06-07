@@ -75,6 +75,33 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
     return i;
 }
 
+/* Send an ERROR TFTP datagram
+ * Args:
+ *  - conn: Connections info to be able to send the ACK
+ *  - err_code: Error code
+ *  - err_msg: Error message
+ *  */
+void send_error(struct conn_info conn, int err_code, char *err_msg)
+{
+    char *buffer;
+
+    buffer = malloc((4 + strlen(err_msg) + 1) * sizeof(char));
+
+    buffer[0] = 0;
+    buffer[1] = 5;
+    buffer[2] = err_code / 256;
+    buffer[3] = err_code % 256;
+
+    sprintf(buffer+4, "%s", err_msg);
+
+    if(sendto(conn.fd, buffer, 4, 0, conn.sock, conn.addr_len) < 0) {
+        free(buffer);
+        error("send_error");
+    }
+
+    free(buffer);
+}
+
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
