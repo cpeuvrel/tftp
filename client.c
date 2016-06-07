@@ -32,6 +32,49 @@ void error(char *msg)
     exit(errno);
 }
 
+/* Send a RRQ (Read ReQuest) TFTP datagram
+ * Args:
+ *  - conn: Connections info to be able to send the ACK
+ *  - buffer: Buffer with the data received
+ *  - buffer_size: Maximum buffer size (can be modified here)
+ *  - filename: File we are requesting
+ *  - mode: mode of the request ("asciinet", "octet")
+ * Return:
+ *  Size of the datagram sent, or
+ *  -1: Buffer too small
+ *  */
+int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode)
+{
+    int total_len; // Final length of the datagram (used to avoid buffer overflow)
+    int filename_l, mode_l; // Length of the strings filename/mode
+    int i;
+
+    filename_l = strlen(filename);
+    mode_l = strlen(mode);
+
+    bzero(buffer, buffer_size);
+
+    total_len = 2 + filename_l + 1 + mode_l + 1 + 7 + 1 + 4 + 1 + 5 + 1 + 1 + 1 ;
+
+    if (total_len > buffer_size)
+        return -1;
+
+    // Op code is 01 for RRQ (Read ReQuest)
+    buffer[1] = 1;
+
+    i = 2;
+
+    // The +1 is for the final \0
+    i += 1 + sprintf(buffer+i, "%s", filename);
+
+    i += 1 + sprintf(buffer+i, "%s", mode);
+
+    if(sendto(conn.fd, buffer, i, 0, conn.sock, conn.addr_len) < 0)
+        error("send_rrq");
+
+    return i;
+}
+
 /* Init socket for the connection
  * Args:
  *  - conn: Connections info to set
@@ -106,6 +149,9 @@ int main(int argc, const char *argv[])
     init_conn(&conn, host);
 
     bzero(buffer, buffer_size * sizeof(char));
+
+    if(send_rrq(conn, buffer, buffer_size, filename, "octet", pref_buffer_size, timeout, no_ext) < 0)
+        error("send_rrq");
 
     free_conn(conn);
     free (buffer);
