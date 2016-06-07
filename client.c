@@ -86,6 +86,13 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 {
     int end = 0; // Flag wether or not we can continue the loop
     int n; // Size of the last datagram we got
+    FILE *fd_dst;
+
+    // Remove file before trying to write to it
+    unlink (filename);
+
+    if ((fd_dst = fopen (filename, "ab")) == NULL)
+        error("Open result file");
 
     bzero(*buffer, buffer_size);
     while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
@@ -111,6 +118,9 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
         if (end == 1)
             break;
     }
+
+
+    fclose(fd_dst);
 
     return 0;
 }
