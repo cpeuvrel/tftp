@@ -369,6 +369,10 @@ void init_conn(struct conn_info *conn, char *host)
     if((*fd = socket( AF_INET, SOCK_DGRAM, 0)) < 0)
         error("socket");
 
+    // Allow it to be reuseable immediatly after end of use
+    if (setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+            error("setsockopt(reuse addr) failed");
+
     //set timer for recv_socket
     if (setsockopt(*fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
         error("setsockopt(rcv timeout) failed");
