@@ -13,6 +13,8 @@
 
 #define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
 #define DST_PORT 69   // Server port defined in RFC1350
+#define PORT_MIN 10000 // Minimum port used as TID (source)
+#define PORT_MAX 50000 // Maximum port used as TID (source)
 
 /* Struct with all we need to send a datagram */
 struct conn_info {
@@ -215,7 +217,7 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
  *  */
 void init_conn(struct conn_info *conn, char *host)
 {
-    int src_port = 42042; // Source port
+    int src_port; // Source port
 
     struct sockaddr_in *dst, src; // sockaddr for destination and source
     int *fd; // Socket's file descriptor
@@ -236,6 +238,10 @@ void init_conn(struct conn_info *conn, char *host)
     dst->sin_family = AF_INET;
     dst->sin_port = htons(DST_PORT);
     dst->sin_addr.s_addr = inet_addr(host);
+
+    // Generate a random source port between PORT_MIN and PORT_MAX
+    srand(time(NULL));
+    src_port = (rand() % (PORT_MAX - PORT_MIN)) + PORT_MIN;
 
     // init src
     bzero(&src, sizeof(src));
