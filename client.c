@@ -13,6 +13,8 @@
 
 #define DEFAULT_TIMEOUT 1 // Default timeout is 1 second
 #define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
+#define PREF_BLK_SIZE 1468 // Maximum block size possible:
+                      // Ethernet MTU (1500) - UDP headers (8) - IP (20)
 #define DST_PORT 69   // Server port defined in RFC1350
 #define HOST_LEN 128  // Maximum length of a hostname
 #define PORT_MIN 10000 // Minimum port used as TID (source)
@@ -44,13 +46,14 @@ void error(char *msg)
  *  - buffer_size: Maximum buffer size (can be modified here)
  *  - filename: File we are requesting
  *  - mode: mode of the request ("asciinet", "octet")
+ *  - pref_buffer_size: Buffer size going to be negociated
  *  - timeout: Timeout going to be negociated
  *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
  * Return:
  *  Size of the datagram sent, or
  *  -1: Buffer too small
  *  */
-int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode, size_t timeout, int no_ext)
+int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
 {
     int total_len; // Final length of the datagram (used to avoid buffer overflow)
     int filename_l, mode_l; // Length of the strings filename/mode
@@ -79,6 +82,11 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
     if (no_ext != 1) {
         i += 1 + sprintf(buffer+i, "tsize");
         i += 1 + sprintf(buffer+i, "0");
+    }
+
+    if (pref_buffer_size != 0 && no_ext != 1) {
+        i += 1 + sprintf(buffer+i, "blksize");
+        i += 1 + sprintf(buffer+i, "%d", (int) pref_buffer_size);
     }
 
     if (timeout != 0 && no_ext != 1) {
@@ -146,13 +154,21 @@ void send_ack(struct conn_info conn, int block_nb)
  *  - final_size: Value pointed to is the total size of the file we're supposed to get
  *  - filename: File we work on
  *  */
-void handle_oack_c(struct conn_info conn, char **buffer, int n, int *final_size, char* filename)
+void handle_oack_c(struct conn_info conn, char **buffer, int *buffer_size, int n, int *final_size, char* filename)
 {
     int i, timeout;
     struct timeval tv;
 
     for (i = 2; i < n; i++) {
-        if (strncmp(*buffer+i, "tsize\0", 6) == 0) {
+        if (strncmp(*buffer+i, "blksize\0", 8) == 0) {
+            i += 8;
+
+            // Size asked + TFTP header
+            *buffer_size = atoi(*buffer + i) + 4;
+
+            *buffer = realloc (*buffer, *buffer_size * sizeof(char));
+        }
+        else if (strncmp(*buffer+i, "tsize\0", 6) == 0) {
             i += 6;
 
             *final_size = atoi(*buffer + i);
@@ -281,6 +297,7 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
  * Args:
  *  - argc: Number of CLI args
  *  - argv: Value of CLI args
+ *  - pref_buffer_size: Buffer size going to be negociated
  *  - timeout: Timeout going to be negociated
  *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
  *  - host: Host to request
@@ -300,6 +317,10 @@ void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeou
                     error("Host too big");
 
                 snprintf(host, host_size, "%s", optarg);
+                break;
+
+            case 'b':
+                *pref_buffer_size = atoi(optarg);
                 break;
 
             case 't':
@@ -397,6 +418,7 @@ int main(int argc, const char *argv[])
     int no_ext = 0; // Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
 
     size_t buffer_size = DEFAULT_BLK_SIZE; // Default buffer size until renegociated
+    size_t pref_buffer_size = PREF_BLK_SIZE; // Block size going to be negociate
 
     struct conn_info conn; // Struct in which we will put all connection infos
 
@@ -412,7 +434,7 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, &timeout, &no_ext, host, HOST_LEN, filenames);
+    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, host, HOST_LEN, filenames);
 
     if (filenames[0] == NULL)
         error("No file asked");
