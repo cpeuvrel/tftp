@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#define DEFAULT_TIMEOUT 1 // Default timeout is 1 second
 #define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
 #define DST_PORT 69   // Server port defined in RFC1350
 #define PORT_MIN 10000 // Minimum port used as TID (source)
@@ -218,10 +219,15 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 void init_conn(struct conn_info *conn, char *host)
 {
     int src_port; // Source port
+    int enable = 1;
 
     struct sockaddr_in *dst, src; // sockaddr for destination and source
     int *fd; // Socket's file descriptor
     int *addr_len; // Address' size
+
+    struct timeval tv;
+    tv.tv_sec = DEFAULT_TIMEOUT; // Timeout in seconds
+    tv.tv_usec = 0; // Timeout in microseconds
 
     fd = malloc(sizeof(int));
     addr_len = malloc(sizeof(int));
@@ -232,6 +238,10 @@ void init_conn(struct conn_info *conn, char *host)
     // Init socket
     if((*fd = socket( AF_INET, SOCK_DGRAM, 0)) < 0)
         error("socket");
+
+    //set timer for recv_socket
+    if (setsockopt(*fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+        error("setsockopt(rcv timeout) failed");
 
     // init Dest
     bzero(dst, sizeof(*dst));
