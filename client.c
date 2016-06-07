@@ -102,6 +102,24 @@ void send_error(struct conn_info conn, int err_code, char *err_msg)
     free(buffer);
 }
 
+/* Send a ACK (ACKnowledgement) TFTP datagram
+ * Args:
+ *  - conn: Connections info to be able to send the ACK
+ *  - block_nb: Block# being acknowledged
+ *  */
+void send_ack(struct conn_info conn, int block_nb)
+{
+    char buffer[4];
+
+    buffer[0] = 0;
+    buffer[1] = 4;
+    buffer[2] = block_nb / 256;
+    buffer[3] = block_nb % 256;
+
+    if(sendto(conn.fd, buffer, 4, 0, conn.sock, conn.addr_len) < 0)
+        error("send_ack");
+}
+
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
