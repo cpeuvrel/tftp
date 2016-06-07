@@ -44,11 +44,12 @@ void error(char *msg)
  *  - buffer_size: Maximum buffer size (can be modified here)
  *  - filename: File we are requesting
  *  - mode: mode of the request ("asciinet", "octet")
+ *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
  * Return:
  *  Size of the datagram sent, or
  *  -1: Buffer too small
  *  */
-int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode)
+int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode, int no_ext)
 {
     int total_len; // Final length of the datagram (used to avoid buffer overflow)
     int filename_l, mode_l; // Length of the strings filename/mode
@@ -74,8 +75,10 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
 
     i += 1 + sprintf(buffer+i, "%s", mode);
 
-    i += 1 + sprintf(buffer+i, "tsize");
-    i += 1 + sprintf(buffer+i, "0");
+    if (no_ext != 1) {
+        i += 1 + sprintf(buffer+i, "tsize");
+        i += 1 + sprintf(buffer+i, "0");
+    }
 
     if(sendto(conn.fd, buffer, i, 0, conn.sock, conn.addr_len) < 0)
         error("send_rrq");
@@ -261,6 +264,7 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
  * Args:
  *  - argc: Number of CLI args
  *  - argv: Value of CLI args
+ *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
  *  - host: Host to request
  *  - host_size: Max length of hostnames
  *  - filenames: Files we are requesting
@@ -278,6 +282,10 @@ void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeou
                     error("Host too big");
 
                 snprintf(host, host_size, "%s", optarg);
+                break;
+
+            case 'e':
+                *no_ext = 1;
                 break;
 
             default:
@@ -364,6 +372,8 @@ void free_conn(struct conn_info conn)
 
 int main(int argc, const char *argv[])
 {
+    int no_ext = 0; // Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
+
     size_t buffer_size = DEFAULT_BLK_SIZE; // Default buffer size until renegociated
 
     struct conn_info conn; // Struct in which we will put all connection infos
@@ -379,7 +389,7 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, host, HOST_LEN, filenames);
+    opts(argc, argv, &no_ext, host, HOST_LEN, filenames);
 
     if (filenames[0] == NULL)
         error("No file asked");
