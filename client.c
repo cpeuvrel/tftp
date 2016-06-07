@@ -125,6 +125,26 @@ void send_ack(struct conn_info conn, int block_nb)
         error("send_ack");
 }
 
+/* Handle OACK (Option ACKnowledgement) datagram from a client perspective
+ * Args:
+ *  - buffer: Buffer with the data received
+ *  - buffer_size: Maximum buffer size (can be modified here)
+ *  - n: Number of bytes in the buffer
+ *  */
+void handle_oack_c(char **buffer, int n)
+{
+    int i, timeout;
+    struct timeval tv;
+
+    for (i = 2; i < n; i++) {
+        /* Handle differents extensions here */
+
+        // Consume last chars until next \0
+        while ((*buffer)[i] != 0 && i < n)
+            i++;
+    }
+}
+
 /* Handle DATA datagram (either client or server)
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
@@ -186,6 +206,11 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 
         if ((*buffer)[0] == 0) {
             switch ((*buffer)[1]) {
+                case 6:
+                    // OACK (Option ACK)
+                    handle_oack_c(buffer, n);
+                    send_ack(conn, 0);
+                    break;
                 case 3:
                     // DATA
                     if (handle_data(conn, *buffer, n, &last_block, fd_dst) == 0 &&
