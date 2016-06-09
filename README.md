@@ -14,5 +14,4 @@ Respect theses RFC:
 
 # TODO
   * WRQ : to put files on server
-  * Split in several files...
   * Server side
