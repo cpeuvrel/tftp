@@ -123,16 +123,25 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
                         break;
                     }
                     break;
+                case 5:
+                    // ERROR
+                    end = 1;
+                    break;
                 case 6:
                     // OACK (Option ACK)
                     handle_oack_c(conn, buffer, &buffer_size, n, &final_size, filename);
                     send_ack(conn, 0);
                     break;
                 default:
-                    // Anything else is an error (RRQ/WRQ/ACK/ERROR or non specified)
+                    // Anything else is an error (RRQ/WRQ or non specified)
+                    send_error(conn, 4, "Illegal TFTP operation");
                     end = 1;
                     break;
             }
+        }
+        else {
+            send_error(conn, 4, "Illegal TFTP operation");
+            end = 1;
         }
 
         bzero(*buffer, buffer_size);
