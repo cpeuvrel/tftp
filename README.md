@@ -14,4 +14,3 @@ Respect theses RFC:
 
 # TODO
   * Server side
-  * Retry

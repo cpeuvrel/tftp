@@ -148,11 +148,12 @@ int send_data(struct conn_info conn, char **buffer, int buffer_size, int *last_b
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
  *  - type: Type of initial request (RRQ/WRQ)
+ *  - retry: Number of retries on errors
  *  - buffer: Buffer with the data received
  *  - buffer_size: Maximum buffer size
  *  - filename: File we work on
  *  */
-int get_data(struct conn_info conn, enum request_code type, char **buffer, int buffer_size, char *filename)
+int get_data(struct conn_info conn, enum request_code type, const int oretry, char **buffer, int buffer_size, char *filename)
 {
     int end = 0; // Flag wether or not we can continue the loop
     int last_block = 0; // Block# of the last OK DATA
@@ -161,6 +162,7 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
     int n; // Size of the last datagram we got
     int got_one = 0 ; // Do we get at least one reply
     int wait_last_ack = 0 ; // Do we just wait for the last ACK (no more DATA to send)
+    int retry = oretry ;
     FILE *fd_dst;
 
     char fmode[3] = ".b"; // Mode to open the file
@@ -179,8 +181,24 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
             break;
     }
 
+    errno = 0;
+
     bzero(*buffer, buffer_size);
-    while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
+    while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len)))) {
+        // On receive fail
+        if (n < 0) {
+            retry--;
+
+            // If we did all retries, break the main loop
+            if (retry <= 0)
+                break;
+
+            continue;
+        }
+
+        // Reset retry for next failed receive
+        retry = oretry;
+
         if (got_one == 0) {
             // Remove file before trying to write to it if download
             if (type == RRQ)

@@ -28,11 +28,11 @@ void error(char *msg)
  *  - host_size: Max length of hostnames
  *  - filenames: Files we are requesting
  *  */
-void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, char *host, size_t host_size, char **filenames)
+void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, int *retry, char *host, size_t host_size, char **filenames)
 {
     int i, choice, index; // Getopt stuff
 
-    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:eu")) != -1) {
+    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:r:eu")) != -1) {
 
         switch( choice )
         {
@@ -49,6 +49,10 @@ void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeou
 
             case 't':
                 *timeout = atoi(optarg);
+                break;
+
+            case 'r':
+                *retry = atoi(optarg);
                 break;
 
             case 'e':

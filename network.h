@@ -20,12 +20,14 @@
 #define PORT_MIN 10000 // Minimum port used as TID (source)
 #define PORT_MAX 50000 // Maximum port used as TID (source)
 
+#define DEFAULT_RETRY 3 // Number of retries on errors
+
 void send_error(struct conn_info conn, int err_code, char *err_msg);
 void send_ack(struct conn_info conn, int block_nb);
 int send_data(struct conn_info conn, char** buffer, int buffer_size, int* last_block, FILE* fd);
 int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, int *total_size, FILE *fd_dst);
 int handle_ack(char* buffer, int buffer_size, int last_block);
-int get_data(struct conn_info conn, enum request_code type, char **buffer, int buffer_size, char *filename);
+int get_data(struct conn_info conn, enum request_code type, const int retry, char **buffer, int buffer_size, char *filename);
 void free_conn(struct conn_info conn);
 
 void init_conn(struct conn_info *conn, char *host);

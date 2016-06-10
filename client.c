@@ -11,6 +11,7 @@ int main(int argc, const char *argv[])
 
     char host[HOST_LEN] =  ""; // Destination's address
     char **filenames; // Array of all files
+    int retry = DEFAULT_RETRY; // Number of retries on errors
     char *buffer;
     size_t timeout = DEFAULT_TIMEOUT;
     int i;
@@ -23,7 +24,7 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, &type, host, HOST_LEN, filenames);
+    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, &type, &retry, host, HOST_LEN, filenames);
 
     if (strlen(host) == 0)
         error("-H is mandatory for clients");
@@ -44,7 +45,7 @@ int main(int argc, const char *argv[])
         if(send_rrq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
             error("send_rrq");
 
-        if(get_data(conn, type, &buffer, buffer_size, filenames[i]) < 0)
+        if(get_data(conn, type, retry, &buffer, buffer_size, filenames[i]) < 0)
             error("get_data");
 
         free_conn(conn);
