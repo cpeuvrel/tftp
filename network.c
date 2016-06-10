@@ -10,6 +10,7 @@
 void send_error(struct conn_info conn, int err_code, char *err_msg)
 {
     char *buffer;
+    int n;
 
     buffer = malloc((4 + strlen(err_msg) + 1) * sizeof(char));
 
@@ -18,9 +19,9 @@ void send_error(struct conn_info conn, int err_code, char *err_msg)
     buffer[2] = err_code / 256;
     buffer[3] = err_code % 256;
 
-    sprintf(buffer+4, "%s", err_msg);
+    n = sprintf(buffer+4, "%s", err_msg);
 
-    if(sendto(conn.fd, buffer, 4, 0, conn.sock, conn.addr_len) < 0) {
+    if(sendto(conn.fd, buffer, 4+n, 0, conn.sock, conn.addr_len) < 0) {
         free(buffer);
         error("send_error");
     }
