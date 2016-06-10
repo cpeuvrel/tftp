@@ -82,6 +82,30 @@ int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, int
     return 0;
 }
 
+/* Check if ACK we received is for the last DATA sent (ignore otherwise)
+ * Args:
+ *  - buffer: Buffer with the data received
+ *  - buffer_size: Buffer size
+ *  - last_block: Number of last block sent (should get it's number here)
+ * Return:
+ *  - 0: Got the ACK for the last DATA sent
+ *  - -1: Got an ACK for another DATA
+ * */
+int handle_ack(char *buffer, int buffer_size, int last_block)
+{
+    int block_nb = 0;
+
+    if (buffer_size != 4)
+        error("Wrong ACK received");
+
+    block_nb = (unsigned char) buffer[2] * 256 + (unsigned char) buffer[3];
+
+    if (block_nb != last_block)
+        return -1;
+
+    return 0;
+}
+
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
@@ -151,6 +175,10 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
                         send_error(conn, 4, "Illegal TFTP operation");
                         end = 1;
                         break;
+                    }
+
+                    if (handle_ack(*buffer, n, last_block) == 0) {
+                        // Send data
                     }
 
                     break;

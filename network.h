@@ -23,6 +23,7 @@
 void send_error(struct conn_info conn, int err_code, char *err_msg);
 void send_ack(struct conn_info conn, int block_nb);
 int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, int *total_size, FILE *fd_dst);
+int handle_ack(char* buffer, int buffer_size, int last_block);
 int get_data(struct conn_info conn, enum request_code type, char **buffer, int buffer_size, char *filename);
 void free_conn(struct conn_info conn);
 
