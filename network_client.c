@@ -3,6 +3,7 @@
 /* Send a RRQ (Read ReQuest) TFTP datagram
  * Args:
  *  - conn: Connections info to be able to send the ACK
+ *  - type: Type of request (RRQ/WRQ)
  *  - buffer: Buffer with the data received
  *  - buffer_size: Maximum buffer size (can be modified here)
  *  - filename: File we are requesting
@@ -14,7 +15,7 @@
  *  Size of the datagram sent, or
  *  -1: Buffer too small
  *  */
-int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
+int send_rrq(struct conn_info conn, enum request_code type, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
 {
     int total_len; // Final length of the datagram (used to avoid buffer overflow)
     int filename_l, mode_l; // Length of the strings filename/mode
@@ -30,8 +31,8 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
     if (total_len > buffer_size)
         return -1;
 
-    // Op code is 01 for RRQ (Read ReQuest)
-    buffer[1] = 1;
+    // Op code
+    buffer[1] = type;
 
     i = 2;
 
@@ -40,7 +41,7 @@ int send_rrq(struct conn_info conn, char* buffer, int buffer_size, char* filenam
 
     i += 1 + sprintf(buffer+i, "%s", mode);
 
-    if (no_ext != 1) {
+    if (type == RRQ && no_ext != 1) {
         i += 1 + sprintf(buffer+i, "tsize");
         i += 1 + sprintf(buffer+i, "0");
     }

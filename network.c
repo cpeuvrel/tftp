@@ -85,11 +85,12 @@ int handle_data(struct conn_info conn, char* buffer, int n, int *last_block, int
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
+ *  - type: Type of initial request (RRQ/WRQ)
  *  - buffer: Buffer with the data received
  *  - buffer_size: Maximum buffer size
  *  - filename: File we work on
  *  */
-int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filename)
+int get_data(struct conn_info conn, enum request_code type, char **buffer, int buffer_size, char *filename)
 {
     int end = 0; // Flag wether or not we can continue the loop
     int last_block = 0; // Block# of the last OK DATA
@@ -99,15 +100,30 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
     int got_one = 0 ; // Do we get at least one reply
     FILE *fd_dst;
 
+    char fmode[3] = ".b"; // Mode to open the file
 
+    switch (type) {
+        case RRQ:
+            fmode[0] = 'a';
+            break;
+
+        case WRQ:
+            fmode[0] = 'r';
+            break;
+
+        default:
+            error("Mode don't exist");
+            break;
+    }
 
     bzero(*buffer, buffer_size);
     while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
         if (got_one == 0) {
-            // Remove file before trying to write to it
-            unlink (filename);
+            // Remove file before trying to write to it if download
+            if (type == RRQ)
+                unlink (filename);
 
-            if ((fd_dst = fopen (filename, "ab")) == NULL)
+            if ((fd_dst = fopen (filename, fmode)) == NULL)
                 error("Cannot open result file");
 
             got_one = 1;
@@ -117,11 +133,26 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
             switch ((*buffer)[1]) {
                 case 3:
                     // DATA
+                    if (type == WRQ) {
+                        send_error(conn, 4, "Illegal TFTP operation");
+                        end = 1;
+                        break;
+                    }
+
                     if (handle_data(conn, *buffer, n, &last_block, &total_size, fd_dst) == 0 &&
                             n < buffer_size - 4) {
                         end = 1;
                         break;
                     }
+                    break;
+                case 4:
+                    // ACK
+                    if (type == RRQ) {
+                        send_error(conn, 4, "Illegal TFTP operation");
+                        end = 1;
+                        break;
+                    }
+
                     break;
                 case 5:
                     // ERROR
@@ -130,7 +161,10 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
                 case 6:
                     // OACK (Option ACK)
                     handle_oack_c(conn, buffer, &buffer_size, n, &final_size, filename);
-                    send_ack(conn, 0);
+
+                    if (type == RRQ) {
+                        send_ack(conn, 0);
+                    }
                     break;
                 default:
                     // Anything else is an error (RRQ/WRQ or non specified)
@@ -156,7 +190,8 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 
     fclose(fd_dst);
 
-    if (final_size != -1 && final_size != total_size) {
+
+    if (type == RRQ && final_size != -1 && final_size != total_size) {
         fprintf(stderr, "Final size of '%s' is wrong. Got %dB instead of %dB\n", filename, total_size, final_size);
         return -1;
     }

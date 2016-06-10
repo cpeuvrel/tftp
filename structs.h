@@ -9,4 +9,9 @@ struct conn_info {
     void *free[3]; // Use for easy free
 };
 
+enum request_code {
+    RRQ = 1,
+    WRQ = 2
+};
+
 #endif /* end of include guard: CONN_INFO_H */

@@ -15,6 +15,8 @@ int main(int argc, const char *argv[])
     size_t timeout = DEFAULT_TIMEOUT;
     int i;
 
+    enum request_code type = RRQ;
+
     buffer=malloc(buffer_size * sizeof(char));
 
     filenames=malloc(argc * sizeof(char*));
@@ -31,11 +33,15 @@ int main(int argc, const char *argv[])
 
         bzero(buffer, buffer_size * sizeof(char));
 
-        fprintf(stderr, "Downloading: %s\n", filenames[i]);
-        if(send_rrq(conn, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
+        if (type == RRQ)
+            fprintf(stderr, "Downloading: %s\n", filenames[i]);
+        else
+            fprintf(stderr, "Uploading: %s\n", filenames[i]);
+
+        if(send_rrq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
             error("send_rrq");
 
-        if(get_data(conn, &buffer, buffer_size, filenames[i]) < 0)
+        if(get_data(conn, type, &buffer, buffer_size, filenames[i]) < 0)
             error("get_data");
 
         free_conn(conn);
