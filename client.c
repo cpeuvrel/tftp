@@ -23,7 +23,7 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, host, HOST_LEN, filenames);
+    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, &type, host, HOST_LEN, filenames);
 
     if (filenames[0] == NULL)
         error("No file asked");

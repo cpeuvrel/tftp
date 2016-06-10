@@ -13,6 +13,5 @@ Respect theses RFC:
     * [RFC2349](https://tools.ietf.org/html/rfc2349): TFTP Timeout Interval and Transfer Size Options
 
 # TODO
-  * WRQ : to put files on server
   * Server side
   * Retry

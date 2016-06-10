@@ -23,15 +23,16 @@ void error(char *msg)
  *  - pref_buffer_size: Buffer size going to be negociated
  *  - timeout: Timeout going to be negociated
  *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
+ *  - type: Type of operation (RRQ/WRQ)
  *  - host: Host to request
  *  - host_size: Max length of hostnames
  *  - filenames: Files we are requesting
  *  */
-void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, char *host, size_t host_size, char **filenames)
+void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, char *host, size_t host_size, char **filenames)
 {
     int i, choice, index; // Getopt stuff
 
-    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:e")) != -1) {
+    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:eu")) != -1) {
 
         switch( choice )
         {
@@ -52,6 +53,10 @@ void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeou
 
             case 'e':
                 *no_ext = 1;
+                break;
+
+            case 'u':
+                *type = WRQ;
                 break;
 
             default:
