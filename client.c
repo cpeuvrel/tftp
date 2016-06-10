@@ -9,7 +9,7 @@ int main(int argc, const char *argv[])
 
     struct conn_info conn; // Struct in which we will put all connection infos
 
-    char host[HOST_LEN] = DST_HOST; // Destination's address
+    char host[HOST_LEN] =  ""; // Destination's address
     char **filenames; // Array of all files
     char *buffer;
     size_t timeout = DEFAULT_TIMEOUT;
@@ -24,6 +24,9 @@ int main(int argc, const char *argv[])
 
     // Parsing CLI
     opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, &type, host, HOST_LEN, filenames);
+
+    if (strlen(host) == 0)
+        error("-H is mandatory for clients");
 
     if (filenames[0] == NULL)
         error("No file asked");

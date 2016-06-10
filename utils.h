@@ -12,8 +12,6 @@
 
 #include "network.h"
 
-#define DST_HOST "192.168.0.100"
-
 void error(char *msg);
 void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, char *host, size_t host_size, char **filenames);
 
