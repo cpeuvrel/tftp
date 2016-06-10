@@ -115,11 +115,6 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 
         if ((*buffer)[0] == 0) {
             switch ((*buffer)[1]) {
-                case 6:
-                    // OACK (Option ACK)
-                    handle_oack_c(conn, buffer, &buffer_size, n, &final_size, filename);
-                    send_ack(conn, 0);
-                    break;
                 case 3:
                     // DATA
                     if (handle_data(conn, *buffer, n, &last_block, &total_size, fd_dst) == 0 &&
@@ -127,6 +122,11 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
                         end = 1;
                         break;
                     }
+                    break;
+                case 6:
+                    // OACK (Option ACK)
+                    handle_oack_c(conn, buffer, &buffer_size, n, &final_size, filename);
+                    send_ack(conn, 0);
                     break;
                 default:
                     // Anything else is an error (RRQ/WRQ/ACK/ERROR or non specified)
