@@ -106,6 +106,44 @@ int handle_ack(char *buffer, int buffer_size, int last_block)
     return 0;
 }
 
+
+/* Check if ACK we received is for the last DATA sent (ignore otherwise)
+ * Args:
+ *  - conn: Connections info to be able to send back ACK/ERROR
+ *  - buffer: Buffer filled with data sent
+ *  - buffer_size: Maximum buffer size
+ *  - last_block: Set the number of current data
+ *  - fd: FD of source file
+ * Return:
+ *  - 0: There are still other chunks to send
+ *  - 1: Last chunk
+ * */
+int send_data(struct conn_info conn, char **buffer, int buffer_size, int *last_block, FILE *fd)
+{
+    int n;
+
+    bzero(*buffer, buffer_size);
+
+    // Opcode for DATA
+    (*buffer)[0] = 0;
+    (*buffer)[1] = 3;
+
+    (*last_block)++;
+
+    (*buffer)[2] = *last_block / 256;
+    (*buffer)[3] = *last_block % 256;
+
+    n = fread(*buffer+4, sizeof(char), buffer_size-4, fd);
+
+    if(sendto(conn.fd, *buffer, 4+n, 0, conn.sock, conn.addr_len) < 0)
+        error("send_ack");
+
+    if ( n < buffer_size - 4)
+        return 1;
+
+    return 0;
+}
+
 /* Loop in which we handle all data received for our request
  * Args:
  *  - conn: Connections info to be able to send back ACK/ERROR
@@ -122,6 +160,7 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
     int final_size = -1; // Total size of the file we're supposed to get
     int n; // Size of the last datagram we got
     int got_one = 0 ; // Do we get at least one reply
+    int wait_last_ack = 0 ; // Do we just wait for the last ACK (no more DATA to send)
     FILE *fd_dst;
 
     char fmode[3] = ".b"; // Mode to open the file
@@ -178,7 +217,12 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
                     }
 
                     if (handle_ack(*buffer, n, last_block) == 0) {
-                        // Send data
+                        if (wait_last_ack != 1) {
+                            wait_last_ack = send_data(conn, buffer, buffer_size, &last_block, fd_dst);
+                        }
+                        else {
+                            end = 1;
+                        }
                     }
 
                     break;
@@ -192,6 +236,9 @@ int get_data(struct conn_info conn, enum request_code type, char **buffer, int b
 
                     if (type == RRQ) {
                         send_ack(conn, 0);
+                    }
+                    else if (type == WRQ) {
+                        wait_last_ack = send_data(conn, buffer, buffer_size, &last_block, fd_dst);
                     }
                     break;
                 default:
