@@ -96,19 +96,25 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
     int total_size = 0; // Incremental size of the file we got so far
     int final_size = -1; // Total size of the file we're supposed to get
     int n; // Size of the last datagram we got
+    int got_one = 0 ; // Do we get at least one reply
     FILE *fd_dst;
 
-    // Remove file before trying to write to it
-    unlink (filename);
 
-    if ((fd_dst = fopen (filename, "ab")) == NULL)
-        error("Open result file");
 
     bzero(*buffer, buffer_size);
     while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
         if (n < 0) {
             fprintf(stderr, "Timeout or error while receiving data\n");
             break;
+        }
+        if (got_one == 0) {
+            // Remove file before trying to write to it
+            unlink (filename);
+
+            if ((fd_dst = fopen (filename, "ab")) == NULL)
+                error("Cannot open result file");
+
+            got_one = 1;
         }
 
         if ((*buffer)[0] == 0) {
@@ -138,6 +144,10 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
         if (end == 1)
             break;
     }
+
+    // If we didn't get any answer from server
+    if (got_one == 0)
+        return -1;
 
     fclose(fd_dst);
 
