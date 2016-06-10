@@ -103,10 +103,6 @@ int get_data(struct conn_info conn, char **buffer, int buffer_size, char *filena
 
     bzero(*buffer, buffer_size);
     while ((n = recvfrom(conn.fd, *buffer, buffer_size, 0, conn.sock, (socklen_t *) &(conn.addr_len))) >= 0) {
-        if (n < 0) {
-            fprintf(stderr, "Timeout or error while receiving data\n");
-            break;
-        }
         if (got_one == 0) {
             // Remove file before trying to write to it
             unlink (filename);
