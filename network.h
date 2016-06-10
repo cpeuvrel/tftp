@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include "conn_info.h"
+#include "structs.h"
 #include "utils.h"
 #include "network_client.h"
 

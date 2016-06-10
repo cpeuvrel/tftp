@@ -7,7 +7,7 @@ all: client
 client.c: utils.h
 utils.c: utils.h
 network.c: network.h
-network.h: conn_info.h utils.h
+network.h: structs.h utils.h
 network_client.c: network_client.h
 network_client.h: network.h
 
