@@ -15,3 +15,4 @@ Respect theses RFC:
 # TODO
   * WRQ : to put files on server
   * Server side
+  * Retry
