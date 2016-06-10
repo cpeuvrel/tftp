@@ -6,8 +6,14 @@
  *  */
 void error(char *msg)
 {
-    perror(msg);
-    exit(errno);
+    if (errno == 0) {
+        fprintf(stderr, "%s\n", msg);
+    }
+    else {
+        perror(msg);
+    }
+
+    exit(errno == 0 ? 1 : errno);
 }
 
 /* Handle CLI arguments
