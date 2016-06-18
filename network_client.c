@@ -17,6 +17,7 @@
  *  */
 int send_rq(struct conn_info conn, enum request_code type, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
 {
+    struct stat st;
     int total_len; // Final length of the datagram (used to avoid buffer overflow)
     int filename_l, mode_l; // Length of the strings filename/mode
     int i;
@@ -42,8 +43,19 @@ int send_rq(struct conn_info conn, enum request_code type, char* buffer, int buf
     i += 1 + sprintf(buffer+i, "%s", mode);
 
     if (type == RRQ && no_ext != 1) {
-        i += 1 + sprintf(buffer+i, "tsize");
-        i += 1 + sprintf(buffer+i, "0");
+        switch (type) {
+            case RRQ:
+                i += 1 + sprintf(buffer+i, "tsize");
+                i += 1 + sprintf(buffer+i, "0");
+                break;
+
+            case WRQ:
+                stat(filename, &st);
+
+                i += 1 + sprintf(buffer+i, "tsize");
+                i += 1 + sprintf(buffer+i, "%ld", st.st_size);
+                break;
+        }
     }
 
     if (pref_buffer_size != 0 && no_ext != 1) {
