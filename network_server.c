@@ -91,7 +91,143 @@ int send_oack(struct conn_info conn, char **opts, int *optval)
  *  */
 int handle_rq(struct conn_info conn, char **buffer, int n, int *buffer_size, FILE **fd_dst, enum request_code *type, int *last_block)
 {
-    // TODO
+    int i, j, k, end, got_opt;
+    got_opt = 0;
+    end = 0;
+    i = 0;
+
+    struct timeval tv;
+
+    char *opts[4] = { "blksize", "tsize", "timeout", 0 };
+    int optval[4] = {-1, -1, -1, 0};
+    int opt_len;
+
+    *type = (*buffer)[1];
+    i += 2;
+
+    if (n - i < 2)
+        error("Missing filename");
+
+    int filename_len = strlen(*buffer+i) + 1;
+
+    char *filename = malloc(sizeof(char) * filename_len);
+    strncpy(filename, *buffer+i, filename_len);
+    filename[filename_len] = 0;
+
+    i += filename_len;
+
+    if (n - i < 2)
+        error("Missing mode");
+
+    if (strncmp(*buffer+i, "octet", 6) != 0 && strncmp(*buffer+i, "netascii", 9) != 0)
+        error("Unrecognized mode");
+
+    // Prepare file
+    char fmode[3] = ".b";
+    switch (*type) {
+        case RRQ:
+            fmode[0] = 'r';
+
+            break;
+        case WRQ:
+            fmode[0] = 'a';
+            unlink (filename);
+
+            break;
+        case NO: break; //Cannot happen
+    }
+
+    if ((*fd_dst = fopen (filename, fmode)) == NULL)
+        error("Cannot open result file");
+
+    i += strlen(*buffer+i) + 1;
+
+    while (i < n && (*buffer)[i] != 0) {
+        for (k = 0; k < (int)(sizeof(opts)*sizeof(char*)) && opts[k] != NULL; k++) {
+            opt_len = strlen(opts[k]) + 1;
+            if (i + opt_len < n && strncmp(*buffer+i, opts[k], opt_len) == 0) {
+                i += opt_len;
+
+                for (j=0; i + j < n && (*buffer)[i+j] != 0 ; j++);
+                // Nothing in for
+
+                if ( i + j >= n) {
+                    end = 1;
+                    break;
+                }
+
+                optval[k] = atoi(*buffer+i);
+
+                i += j + 1;
+
+                // Handle options
+                switch (k) {
+                    case 0:
+                        // blksize
+                        *buffer_size = optval[k];
+                        *buffer = realloc (*buffer, *buffer_size * sizeof(char));
+                        break;
+
+                    case 1:
+                        // tsize
+                        if (*type == RRQ) {
+                            // Give the final size
+                            fseek(*fd_dst, 0, SEEK_END);
+                            optval[k] = ftell(*fd_dst);
+                            fseek(*fd_dst, 0, SEEK_SET);
+
+                            /*optval[k] = -1;*/
+                        }
+                        // For WRQ, just echo back the size we got
+
+                        break;
+
+                    case 2:
+                        // timeout
+                        tv.tv_sec = optval[k];
+                        tv.tv_usec = 0;
+
+                        // set timer for recv socket
+                        if (setsockopt(conn.fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+                            error("setsockopt(custom rcv timeout) failed");
+
+                        break;
+                }
+
+                got_opt = 1;
+                end = 2;
+                break;
+            }
+
+        }
+        if (end == 2)
+            continue;
+        else if (end != 0)
+            break;
+
+        i++;
+    }
+
+    if (got_opt) {
+        send_oack(conn, opts, optval);
+    }
+    else {
+        switch (*type) {
+            case RRQ:
+                send_data(conn, buffer, *buffer_size, last_block, *fd_dst);
+
+                break;
+            case WRQ:
+                send_ack(conn, 0);
+                break;
+            case NO: break; //Cannot happen
+        }
+    }
+
+    fprintf(stderr, "===> Request file '%s' for %s\n", filename, *type == RRQ ? "RRQ" : "WRQ");
+
+    free(filename);
+
     return 0;
 }
 
