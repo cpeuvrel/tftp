@@ -7,6 +7,8 @@ int main(int argc, const char *argv[])
     size_t buffer_size = DEFAULT_BLK_SIZE; // Default buffer size until renegociated
     size_t pref_buffer_size = PREF_BLK_SIZE; // Block size going to be negociate
 
+    int server_port = DEFAULT_SERVER_PORT;
+
     struct conn_info conn; // Struct in which we will put all connection infos
 
     char host[HOST_LEN] =  ""; // Destination's address
@@ -24,7 +26,7 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, &pref_buffer_size, &timeout, &no_ext, &type, &retry, host, HOST_LEN, filenames);
+    opts(argc, argv, &server_port, &pref_buffer_size, &timeout, &no_ext, &type, &retry, host, HOST_LEN, filenames);
 
     if (strlen(host) == 0)
         error("-H is mandatory for clients");
@@ -33,7 +35,7 @@ int main(int argc, const char *argv[])
         error("No file asked");
 
     for (i = 0; filenames[i] != NULL ; i++) {
-        init_client_conn(&conn, host);
+        init_client_conn(&conn, host, server_port);
 
         bzero(buffer, buffer_size * sizeof(char));
 

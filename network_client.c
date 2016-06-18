@@ -112,8 +112,9 @@ void handle_oack_c(struct conn_info conn, char **buffer, int *buffer_size, int n
  * Args:
  *  - conn: Connections info to set
  *  - host: Host to request
+ *  - server_port: Port to request
  *  */
-void init_client_conn(struct conn_info *conn, char *host)
+void init_client_conn(struct conn_info *conn, char *host, int server_port)
 {
     int src_port; // Source port
     int enable = 1;
@@ -147,7 +148,7 @@ void init_client_conn(struct conn_info *conn, char *host)
     // init Dest
     bzero(dst, sizeof(*dst));
     dst->sin_family = AF_INET;
-    dst->sin_port = htons(DST_PORT);
+    dst->sin_port = htons(server_port);
     dst->sin_addr.s_addr = inet_addr(host);
 
     // Generate a random source port between PORT_MIN and PORT_MAX

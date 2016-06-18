@@ -13,6 +13,6 @@
 #include "network.h"
 
 void error(char *msg);
-void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, int *retry, char *host, size_t host_size, char **filenames);
+void opts(int argc, const char *argv[], int *server_port, size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, int *retry, char *host, size_t host_size, char **filenames);
 
 #endif /* end of include guard: UTILS_H */

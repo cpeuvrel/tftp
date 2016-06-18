@@ -20,6 +20,7 @@ void error(char *msg)
  * Args:
  *  - argc: Number of CLI args
  *  - argv: Value of CLI args
+ *  - server_port: Port to replace the default 69 defined in RFC1350
  *  - pref_buffer_size: Buffer size going to be negociated
  *  - timeout: Timeout going to be negociated
  *  - no_ext: Flag to show if can use RFC2347 extensions (0 = can use extension, 1 = no extension)
@@ -28,11 +29,11 @@ void error(char *msg)
  *  - host_size: Max length of hostnames
  *  - filenames: Files we are requesting
  *  */
-void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, int *retry, char *host, size_t host_size, char **filenames)
+void opts(int argc, const char *argv[], int *server_port, size_t *pref_buffer_size, size_t *timeout, int *no_ext, enum request_code *type, int *retry, char *host, size_t host_size, char **filenames)
 {
     int i, choice, index; // Getopt stuff
 
-    while ((choice = getopt(argc,(char * const*) argv, "H:b:t:r:eu")) != -1) {
+    while ((choice = getopt(argc,(char * const*) argv, "H:p:b:t:r:eu")) != -1) {
 
         switch( choice )
         {
@@ -41,6 +42,10 @@ void opts(int argc, const char *argv[], size_t *pref_buffer_size, size_t *timeou
                     error("Host too big");
 
                 snprintf(host, host_size, "%s", optarg);
+                break;
+
+            case 'p':
+                *server_port = atoi(optarg);
                 break;
 
             case 'b':
