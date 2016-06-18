@@ -18,6 +18,8 @@ int main(int argc, const char *argv[])
     size_t timeout = DEFAULT_TIMEOUT;
     int i;
 
+    int server_fd; // Server's socket's file descriptor
+
     enum request_code type = RRQ;
     enum tftp_role role = CLIENT;
 
@@ -54,6 +56,9 @@ int main(int argc, const char *argv[])
 
             free_conn(conn);
         }
+    }
+    else {
+        server_fd = init_server_conn(server_port);
     }
 
     free (filenames);

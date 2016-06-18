@@ -10,11 +10,13 @@ network.c: network.h
 network.h: structs.h utils.h
 network_client.c: network_client.h
 network_client.h: network.h
+network_server.c: network_server.h
+network_server.h: network.h
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-client: utils.o network.o network_client.o client.o
+client: utils.o network.o network_client.o network_server.o client.o
 	$(CC) $(CFLAGS) -o $@ $+
 
 clean:

@@ -8,6 +8,7 @@
 #include "structs.h"
 #include "utils.h"
 #include "network_client.h"
+#include "network_server.h"
 
 #define DEFAULT_SERVER_PORT 69   // Server port defined in RFC1350
 #define DEFAULT_BLK_SIZE 516 // Default value defined in RFC1350 is 512 of payload + 4 of headers
