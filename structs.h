@@ -14,4 +14,9 @@ enum request_code {
     WRQ = 2
 };
 
+enum tftp_role {
+    CLIENT,
+    SERVER
+};
+
 #endif /* end of include guard: CONN_INFO_H */

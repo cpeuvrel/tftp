@@ -19,6 +19,7 @@ int main(int argc, const char *argv[])
     int i;
 
     enum request_code type = RRQ;
+    enum tftp_role role = CLIENT;
 
     buffer=malloc(buffer_size * sizeof(char));
 
@@ -26,31 +27,33 @@ int main(int argc, const char *argv[])
     bzero(filenames, argc * sizeof(char*));
 
     // Parsing CLI
-    opts(argc, argv, &server_port, &pref_buffer_size, &timeout, &no_ext, &type, &retry, host, HOST_LEN, filenames);
+    opts(argc, argv, &server_port, &pref_buffer_size, &timeout, &no_ext, &type, &retry, &role, host, HOST_LEN, filenames);
 
-    if (strlen(host) == 0)
-        error("-H is mandatory for clients");
+    if (role == CLIENT) {
+        if (strlen(host) == 0)
+            error("-H is mandatory for clients");
 
-    if (filenames[0] == NULL)
-        error("No file asked");
+        if (filenames[0] == NULL)
+            error("No file asked");
 
-    for (i = 0; filenames[i] != NULL ; i++) {
-        init_client_conn(&conn, host, server_port);
+        for (i = 0; filenames[i] != NULL ; i++) {
+            init_client_conn(&conn, host, server_port);
 
-        bzero(buffer, buffer_size * sizeof(char));
+            bzero(buffer, buffer_size * sizeof(char));
 
-        if (type == RRQ)
-            fprintf(stderr, "Downloading: %s\n", filenames[i]);
-        else
-            fprintf(stderr, "Uploading: %s\n", filenames[i]);
+            if (type == RRQ)
+                fprintf(stderr, "Downloading: %s\n", filenames[i]);
+            else
+                fprintf(stderr, "Uploading: %s\n", filenames[i]);
 
-        if(send_rq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
-            error("send_rq");
+            if(send_rq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
+                error("send_rq");
 
-        if(get_data(conn, type, retry, &buffer, buffer_size, filenames[i]) < 0)
-            error("get_data");
+            if(get_data(conn, type, retry, &buffer, buffer_size, filenames[i]) < 0)
+                error("get_data");
 
-        free_conn(conn);
+            free_conn(conn);
+        }
     }
 
     free (filenames);
