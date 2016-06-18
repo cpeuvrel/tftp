@@ -59,6 +59,10 @@ int main(int argc, const char *argv[])
     }
     else {
         server_fd = init_server_conn(server_port);
+
+        while (1) {
+            rcv_data(server_fd);
+        }
     }
 
     free (filenames);

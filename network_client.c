@@ -55,6 +55,8 @@ int send_rq(struct conn_info conn, enum request_code type, char* buffer, int buf
                 i += 1 + sprintf(buffer+i, "tsize");
                 i += 1 + sprintf(buffer+i, "%ld", st.st_size);
                 break;
+
+            case NO: break; // Cannot happen
         }
     }
 

@@ -10,6 +10,7 @@ struct conn_info {
 };
 
 enum request_code {
+    NO = 0,
     RRQ = 1,
     WRQ = 2
 };
