@@ -1,6 +1,6 @@
 #include "network_client.h"
 
-/* Send a RRQ (Read ReQuest) TFTP datagram
+/* Send a RRQ (Read ReQuest) or WRQ (Write ReQuest) TFTP datagram
  * Args:
  *  - conn: Connections info to be able to send the ACK
  *  - type: Type of request (RRQ/WRQ)
@@ -15,7 +15,7 @@
  *  Size of the datagram sent, or
  *  -1: Buffer too small
  *  */
-int send_rrq(struct conn_info conn, enum request_code type, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
+int send_rq(struct conn_info conn, enum request_code type, char* buffer, int buffer_size, char* filename, char* mode, size_t pref_buffer_size, size_t timeout, int no_ext)
 {
     int total_len; // Final length of the datagram (used to avoid buffer overflow)
     int filename_l, mode_l; // Length of the strings filename/mode
@@ -57,7 +57,7 @@ int send_rrq(struct conn_info conn, enum request_code type, char* buffer, int bu
     }
 
     if(sendto(conn.fd, buffer, i, 0, conn.sock, conn.addr_len) < 0)
-        error("send_rrq");
+        error("send_rq");
 
     return i;
 }

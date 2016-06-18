@@ -44,8 +44,8 @@ int main(int argc, const char *argv[])
         else
             fprintf(stderr, "Uploading: %s\n", filenames[i]);
 
-        if(send_rrq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
-            error("send_rrq");
+        if(send_rq(conn, type, buffer, buffer_size, filenames[i], "octet", pref_buffer_size, timeout, no_ext) < 0)
+            error("send_rq");
 
         if(get_data(conn, type, retry, &buffer, buffer_size, filenames[i]) < 0)
             error("get_data");
