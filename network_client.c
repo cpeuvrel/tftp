@@ -107,3 +107,66 @@ void handle_oack_c(struct conn_info conn, char **buffer, int *buffer_size, int n
             i++;
     }
 }
+
+/* Init socket for the connection
+ * Args:
+ *  - conn: Connections info to set
+ *  - host: Host to request
+ *  */
+void init_client_conn(struct conn_info *conn, char *host)
+{
+    int src_port; // Source port
+    int enable = 1;
+
+    struct sockaddr_in *dst, src; // sockaddr for destination and source
+    int fd; // Socket's file descriptor
+    int addr_len; // Address' size
+
+    struct timeval tv;
+    tv.tv_sec = DEFAULT_TIMEOUT; // Timeout in seconds
+    tv.tv_usec = 0; // Timeout in microseconds
+
+    /*fd = malloc(sizeof(int));*/
+    /*addr_len = malloc(sizeof(int));*/
+    dst = malloc(sizeof(struct sockaddr_in));
+
+    addr_len=sizeof(*dst);
+
+    // Init socket
+    if((fd = socket( AF_INET, SOCK_DGRAM, 0)) < 0)
+        error("socket");
+
+    // Allow it to be reuseable immediatly after end of use
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+            error("setsockopt(reuse addr) failed");
+
+    //set timer for recv_socket
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+        error("setsockopt(rcv timeout) failed");
+
+    // init Dest
+    bzero(dst, sizeof(*dst));
+    dst->sin_family = AF_INET;
+    dst->sin_port = htons(DST_PORT);
+    dst->sin_addr.s_addr = inet_addr(host);
+
+    // Generate a random source port between PORT_MIN and PORT_MAX
+    srand(time(NULL));
+    src_port = (rand() % (PORT_MAX - PORT_MIN)) + PORT_MIN;
+
+    // init src
+    bzero(&src, sizeof(src));
+    src.sin_family = AF_INET;
+    src.sin_port = htons(src_port);
+    src.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    // Init struct conn_info
+    bzero(conn, sizeof(*conn));
+    conn->fd = fd;
+    conn->sock = (struct sockaddr*) dst;
+    conn->addr_len = addr_len;
+    conn->free = dst;
+
+    if (bind(fd, (struct sockaddr*) &src, addr_len))
+        error("bind");
+}

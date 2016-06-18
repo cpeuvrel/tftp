@@ -33,7 +33,7 @@ int main(int argc, const char *argv[])
         error("No file asked");
 
     for (i = 0; filenames[i] != NULL ; i++) {
-        init_conn(&conn, host);
+        init_client_conn(&conn, host);
 
         bzero(buffer, buffer_size * sizeof(char));
 

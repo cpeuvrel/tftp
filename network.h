@@ -30,6 +30,4 @@ int handle_ack(char* buffer, int buffer_size, int last_block);
 int get_data(struct conn_info conn, enum request_code type, const int retry, char **buffer, int buffer_size, char *filename);
 void free_conn(struct conn_info conn);
 
-void init_conn(struct conn_info *conn, char *host);
-
 #endif /* end of include guard: NETWORK_H */
