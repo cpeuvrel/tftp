@@ -52,7 +52,30 @@ int init_server_conn(int server_port)
  *  */
 int send_oack(struct conn_info conn, char **opts, int *optval)
 {
-    // TODO
+    int i, k, buffer_size;
+    char *buffer = NULL;
+
+    buffer_size = optval[0];
+    buffer = calloc(buffer_size, sizeof(char));
+
+    buffer[1] = 6;
+    i = 2;
+
+    for (k = 0; opts[k] != NULL; k++) {
+        if (optval[k] == -1)
+            continue;
+
+        i += 1 + sprintf(buffer+i, "%s", opts[k]);
+        i += 1 + sprintf(buffer+i, "%d", optval[k]);
+
+        fprintf(stderr, "Opt: %s=%d\n", opts[k], optval[k]);
+    }
+
+    if (sendto(conn.fd, buffer, i, 0, conn.sock, conn.addr_len) < 0)
+        error("send_oack");
+
+    free(buffer);
+
     return 0;
 }
 
