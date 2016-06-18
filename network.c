@@ -298,9 +298,7 @@ int get_data(struct conn_info conn, enum request_code type, const int oretry, ch
  *  */
 void free_conn(struct conn_info conn)
 {
-    free(conn.free[0]);
-    free(conn.free[1]);
-    free(conn.free[2]);
+    if (conn.free != NULL) free(conn.free);
 }
 
 /* Init socket for the connection
@@ -360,9 +358,7 @@ void init_conn(struct conn_info *conn, char *host)
     conn->fd = *fd;
     conn->sock = (struct sockaddr*) dst;
     conn->addr_len = *addr_len;
-    conn->free[0] = fd;
-    conn->free[1] = dst;
-    conn->free[2] = addr_len;
+    conn->free = dst;
 
     if (bind(*fd, (struct sockaddr*) &src, *addr_len))
         error("bind");

@@ -6,7 +6,7 @@ struct conn_info {
     int fd; // File descriptor of the connection's socket
     struct sockaddr *sock; // Connection's socket
     int addr_len; // Size of the address
-    void *free[3]; // Use for easy free
+    void *free; // Use for easy free
 };
 
 enum request_code {
